@@ -22,21 +22,27 @@ function StatCard({
   delay: number;
 }) {
   return (
-    <div
-      className="flex animate-rise flex-col gap-2.5 rounded-xl bg-card p-4 shadow-[inset_0_0_0_0.8px_var(--input)]"
+    <Panel
+      aria-label={label}
+      className="group/stat h-[120px] min-w-0 animate-rise"
       style={{ animationDelay: `${delay}ms` }}
     >
-      <div className="flex items-center justify-between">
-        <span className="font-medium text-muted-foreground text-xs leading-none">
-          {label}
+      <PanelHeader>
+        <PanelTitle>{label}</PanelTitle>
+        <Icon
+          className="transition-transform duration-300 ease-[var(--ease-out-expo)] group-hover/stat:-rotate-12 group-hover/stat:scale-110"
+          name={icon}
+        />
+      </PanelHeader>
+      <div className="relative flex min-h-px w-full flex-1 flex-col items-start justify-end gap-2.5 rounded-[10px] border-[0.8px] border-border bg-card px-3 pb-3 transition-[box-shadow,transform] duration-300 ease-[var(--ease-out-expo)] group-hover/stat:-translate-y-px group-hover/stat:shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),0px_1px_0px_0px_rgba(25,28,33,0.02),0px_0px_0px_1px_rgba(25,28,33,0.08)]">
+        <span className="whitespace-nowrap font-medium text-2xl text-foreground leading-none tabular-nums">
+          {value}
         </span>
-        <Icon className="opacity-60" name={icon} size={14} />
+        <span className="truncate text-[13px] text-muted-foreground leading-none">
+          {hint}
+        </span>
       </div>
-      <span className="font-medium text-2xl text-foreground leading-none tabular-nums">
-        {value}
-      </span>
-      <span className="text-muted-foreground text-xs leading-none">{hint}</span>
-    </div>
+    </Panel>
   );
 }
 
