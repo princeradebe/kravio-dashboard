@@ -2,6 +2,7 @@ import type * as React from "react";
 import { useEffect, useRef, useState } from "react";
 import { asset } from "@/lib/assets";
 import { navAnalytics, navMain, navSupport, type NavItemDef } from "@/lib/data";
+import { navViewMap, useNav, viewMeta } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 import {
   InputGroup,
@@ -138,15 +139,21 @@ function NavItem({
 
 export function Sidebar({
   onCollapse,
+  onOpenPalette,
   className,
 }: {
   onCollapse: () => void;
+  onOpenPalette: () => void;
   className?: string;
 }): React.ReactElement {
-  const [activeNav, setActiveNav] = useState("overview");
-  const [activeChild, setActiveChild] = useState<string | undefined>();
+  const { view, navigate, goHome } = useNav();
+  const meta = viewMeta[view.name];
+  const activeNav = meta.navId;
+  const activeChild = view.tab ?? meta.childId;
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     tickets: true,
+    agents: view.name === "agents",
+    kb: view.name === "knowledge-base" || view.name === "article-editor",
   });
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -157,20 +164,18 @@ export function Sidebar({
         event.key.toLowerCase() === "k"
       ) {
         event.preventDefault();
-        searchRef.current?.focus();
+        onOpenPalette();
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, []);
+  }, [onOpenPalette]);
 
   const selectItem = (id: string) => {
-    setActiveNav(id);
-    setActiveChild(undefined);
+    navigate(navViewMap[id]);
   };
-  const selectChild = (parentId: string) => (childId: string) => {
-    setActiveNav(parentId);
-    setActiveChild(childId);
+  const selectChild = (_parentId: string) => (childId: string) => {
+    navigate(navViewMap[childId]);
   };
   const renderItems = (items: NavItemDef[], muted?: boolean) =>
     items.map((item) => (
@@ -198,6 +203,10 @@ export function Sidebar({
         <a
           className="flex w-[200px] items-center gap-3 rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
           href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            goHome();
+          }}
         >
           <span className="relative size-6 shrink-0 transition-transform duration-300 ease-[var(--ease-out-expo)] hover:rotate-[-8deg] hover:scale-105">
             <AbsIcon
@@ -235,7 +244,12 @@ export function Sidebar({
           <Icon name="search" />
           <InputGroupInput
             aria-label="Search anything"
+            onFocus={(e) => {
+              e.currentTarget.blur();
+              onOpenPalette();
+            }}
             placeholder="Search anything"
+            readOnly
             ref={searchRef}
             type="search"
           />
@@ -272,7 +286,9 @@ export function Sidebar({
           </div>
         </nav>
         <button
+          aria-current={view.name === "settings" ? "page" : undefined}
           className="group/acct flex w-[226px] shrink-0 items-center gap-2 rounded-xl border-[0.8px] border-border bg-card py-2 pr-2.5 pl-2 text-left outline-none drop-shadow-[0px_0px_4px_rgba(0,0,0,0.03)] transition-[box-shadow,transform] duration-200 hover:shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),0px_1px_0px_0px_rgba(25,28,33,0.02),0px_0px_0px_1px_rgba(25,28,33,0.08)] focus-visible:ring-[3px] focus-visible:ring-ring/40 active:scale-[0.99]"
+          onClick={() => navigate({ name: "settings" })}
           type="button"
         >
           <span className="relative flex size-8 shrink-0 items-center justify-center rounded-full border-[0.8px] border-[#d9d9d9] bg-[#f7f7f7] p-2">

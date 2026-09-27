@@ -27,6 +27,8 @@ export const buttonVariants = cva(
         surface:
           "rounded-lg border-[0.8px] border-input bg-card text-secondary-foreground hover:bg-[#fcfcfc] hover:shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),0px_1px_0px_0px_rgba(25,28,33,0.02),0px_0px_0px_1px_rgba(25,28,33,0.08)] data-[popup-open]:bg-[#fcfcfc]",
         ghost: "rounded-md text-secondary-foreground hover:bg-black/[0.04]",
+        destructive:
+          "rounded-lg border border-destructive bg-destructive text-white hover:bg-destructive/90",
         primary:
           "rounded-lg border border-primary bg-[linear-gradient(180deg,#37475d_0%,#1f2937_64.7%)] text-primary-foreground hover:brightness-110",
       },

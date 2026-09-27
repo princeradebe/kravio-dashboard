@@ -2,21 +2,25 @@ import { useMemo, useState } from "react";
 import type * as React from "react";
 import { asset } from "@/lib/assets";
 import {
-  assigneeAvatars,
   cellClasses,
   cellTextClasses,
-  initialTickets,
   priorityIcons,
   priorityRanks,
   slaLabel,
   sortableCols,
   statusIcons,
   tableGridCols,
+  ticketStatuses,
   type SortKey,
-  type Ticket,
-  type TicketPriority,
-  type TicketStatus,
 } from "@/lib/data";
+import { useNav } from "@/lib/nav";
+import {
+  initials,
+  useStore,
+  type Priority,
+  type Ticket,
+  type TicketStatus,
+} from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -96,11 +100,16 @@ function toCsv(rows: Ticket[]): string {
 }
 
 export function SlaTable(): React.ReactElement {
-  const [rows, setRows] = useState<Ticket[]>(initialTickets);
+  const { tickets: rows, agents, patchTicket } = useStore();
+  const { navigate } = useNav();
+  const agentAvatars = useMemo(
+    () => Object.fromEntries(agents.map((a) => [a.name, a.avatar])),
+    [agents],
+  );
   const [selected, setSelected] = useState<Set<string>>(new Set(["#2319"]));
   const [sort, setSort] = useState<SortState>(null);
   const [query, setQuery] = useState("");
-  const [priorities, setPriorities] = useState<Set<TicketPriority>>(new Set());
+  const [priorities, setPriorities] = useState<Set<Priority>>(new Set());
   const [statuses, setStatuses] = useState<Set<TicketStatus>>(new Set());
 
   const filter = query.trim().toLowerCase();
@@ -165,9 +174,7 @@ export function SlaTable(): React.ReactElement {
     });
 
   const patchRow = (id: string, patch: Partial<Ticket>) =>
-    setRows((prev) =>
-      prev.map((row) => (row.id === id ? { ...row, ...patch } : row)),
-    );
+    patchTicket(id, patch);
 
   const exportCsv = () => {
     const rowsToExport = visible.filter(
@@ -250,7 +257,7 @@ export function SlaTable(): React.ReactElement {
               <MenuSeparator />
               <MenuGroup>
                 <MenuGroupLabel>Status</MenuGroupLabel>
-                {(["In Review", "In Progress", "Delivered"] as const).map((s) => (
+                {ticketStatuses.map((s) => (
                   <MenuCheckboxItem
                     checked={statuses.has(s)}
                     key={s}
@@ -392,9 +399,14 @@ export function SlaTable(): React.ReactElement {
                   aria-selected={isSelected}
                   className={cn(
                     tableGridCols,
-                    "group/row h-[45.75px] animate-rise border-black/[0.06] border-b bg-card transition-colors duration-150 hover:bg-[#fafafa]",
+                    "group/row h-[45.75px] animate-rise cursor-pointer border-black/[0.06] border-b bg-card transition-colors duration-150 hover:bg-[#fafafa]",
                   )}
                   key={row.id}
+                  onClick={(e) => {
+                    const el = e.target as HTMLElement;
+                    if (el.closest("button, [role=checkbox], a")) return;
+                    navigate({ name: "ticket-detail", ticketId: row.id });
+                  }}
                   role="row"
                   style={{ animationDelay: `${420 + i * 60}ms` }}
                 >
@@ -409,14 +421,19 @@ export function SlaTable(): React.ReactElement {
                     </span>
                   </div>
                   <div className={cellClasses} role="cell">
-                    <span
+                    <button
+                      aria-label={`Open ticket ${row.id}: ${row.subject}`}
                       className={cn(
                         cellTextClasses,
-                        "flex-1 transition-colors group-hover/row:text-foreground",
+                        "flex-1 rounded text-left underline-offset-2 outline-none transition-colors hover:underline group-hover/row:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/40",
                       )}
+                      onClick={() =>
+                        navigate({ name: "ticket-detail", ticketId: row.id })
+                      }
+                      type="button"
                     >
                       {row.subject}
-                    </span>
+                    </button>
                   </div>
                   <div className={cn(cellClasses, "gap-2")} role="cell">
                     <Icon name={priorityIcons[row.priority]} />
@@ -426,17 +443,16 @@ export function SlaTable(): React.ReactElement {
                   </div>
                   <div className={cn(cellClasses, "gap-2")} role="cell">
                     <Avatar className="transition-transform duration-200 group-hover/row:scale-110">
-                      <AvatarImage
-                        alt=""
-                        height={20}
-                        src={asset(assigneeAvatars[row.assignee])}
-                        width={20}
-                      />
+                      {agentAvatars[row.assignee] ? (
+                        <AvatarImage
+                          alt=""
+                          height={20}
+                          src={asset(agentAvatars[row.assignee]!)}
+                          width={20}
+                        />
+                      ) : null}
                       <AvatarFallback>
-                        {row.assignee
-                          .split(" ")
-                          .map((part) => part[0])
-                          .join("")}
+                        {initials(row.assignee)}
                       </AvatarFallback>
                     </Avatar>
                     <span className={cn(cellTextClasses, "flex-1")}>
@@ -480,6 +496,18 @@ export function SlaTable(): React.ReactElement {
                         <MenuGroup>
                           <MenuGroupLabel>{row.id}</MenuGroupLabel>
                           <MenuItem
+                            onClick={() =>
+                              navigate({
+                                name: "ticket-detail",
+                                ticketId: row.id,
+                              })
+                            }
+                          >
+                            <Icon name="tb-search" />
+                            Open ticket
+                          </MenuItem>
+                          <MenuSeparator />
+                          <MenuItem
                             disabled={row.status === "In Progress"}
                             onClick={() =>
                               patchRow(row.id, { status: "In Progress" })
@@ -510,24 +538,30 @@ export function SlaTable(): React.ReactElement {
                         <MenuSeparator />
                         <MenuGroup>
                           <MenuGroupLabel>Reassign</MenuGroupLabel>
-                          {(Object.keys(assigneeAvatars) as Ticket["assignee"][]).map(
-                            (name) => (
-                              <MenuItem
-                                disabled={row.assignee === name}
-                                key={name}
-                                onClick={() => patchRow(row.id, { assignee: name })}
-                              >
+                          {agents.map((agent) => (
+                            <MenuItem
+                              disabled={row.assignee === agent.name}
+                              key={agent.id}
+                              onClick={() =>
+                                patchRow(row.id, { assignee: agent.name })
+                              }
+                            >
+                              {agent.avatar ? (
                                 <img
                                   alt=""
                                   className="size-4 rounded-full"
                                   height={16}
-                                  src={asset(assigneeAvatars[name])}
+                                  src={asset(agent.avatar)}
                                   width={16}
                                 />
-                                {name}
-                              </MenuItem>
-                            ),
-                          )}
+                              ) : (
+                                <span className="flex size-4 items-center justify-center rounded-full bg-secondary font-medium text-[8px] text-secondary-foreground">
+                                  {initials(agent.name)}
+                                </span>
+                              )}
+                              {agent.name}
+                            </MenuItem>
+                          ))}
                         </MenuGroup>
                       </MenuPopup>
                     </Menu>

@@ -343,85 +343,47 @@ export const feedIcons: Record<FeedKind, string> = {
 export const feedBodyText = (body: FeedPart[]) =>
   body.map((part) => (typeof part === "string" ? part : part.strong)).join("");
 
-export type TicketStatus = "In Review" | "In Progress" | "Delivered";
-export type TicketPriority = "High" | "Medium" | "Low";
-export type TicketAssignee = "John Doe" | "Sarah Lee" | "Michael Wong";
+export const slaLabel = (hours: number) => {
+  if (hours < 0) {
+    const abs = Math.abs(hours);
+    return abs >= 24 ? `${Math.round(abs / 24)}d overdue` : `${abs}h overdue`;
+  }
+  return hours >= 24 ? `${Math.round(hours / 24)}d left` : `${hours}h left`;
+};
 
-export interface Ticket {
-  id: string;
-  subject: string;
-  priority: TicketPriority;
-  assignee: TicketAssignee;
-  status: TicketStatus;
-  created: string;
-  slaHours: number;
-}
-
-export const initialTickets: Ticket[] = [
-  {
-    id: "#2319",
-    subject: "Payment failed on invoice",
-    priority: "High",
-    assignee: "John Doe",
-    status: "In Review",
-    created: "2025-08-18",
-    slaHours: 2,
-  },
-  {
-    id: "#2320",
-    subject: "Login issue",
-    priority: "Medium",
-    assignee: "Sarah Lee",
-    status: "Delivered",
-    created: "2025-08-19",
-    slaHours: 1,
-  },
-  {
-    id: "#2321",
-    subject: "Feature request export",
-    priority: "Low",
-    assignee: "John Doe",
-    status: "In Progress",
-    created: "2025-08-19",
-    slaHours: 24,
-  },
-  {
-    id: "#2322",
-    subject: "Contract renewal issue",
-    priority: "Medium",
-    assignee: "Michael Wong",
-    status: "In Progress",
-    created: "2025-08-20",
-    slaHours: 9,
-  },
-];
-
-export const slaLabel = (hours: number) =>
-  hours >= 24 ? `${Math.round(hours / 24)}d left` : `${hours}h left`;
-
-export const priorityIcons: Record<TicketPriority, string> = {
+export const priorityIcons: Record<string, string> = {
   High: "signal-full",
   Medium: "signal-medium",
   Low: "signal-low",
 };
 
-export const statusIcons: Record<TicketStatus, string> = {
+export const statusIcons: Record<string, string> = {
   "In Review": "status-review",
   Delivered: "status-delivered",
   "In Progress": "status-progress",
+  Escalated: "feed-alert",
+  Closed: "check-tick",
 };
 
-export const assigneeAvatars: Record<TicketAssignee, string> = {
+export const assigneeAvatars: Record<string, string> = {
   "John Doe": "avatar-john",
   "Sarah Lee": "avatar-sarah",
   "Michael Wong": "avatar-michael",
 };
 
-export const priorityRanks: Record<TicketPriority, number> = {
+export const priorityRanks: Record<string, number> = {
   High: 3,
   Medium: 2,
   Low: 1,
 };
+
+export const ticketStatuses = [
+  "In Review",
+  "In Progress",
+  "Delivered",
+  "Escalated",
+  "Closed",
+] as const;
 
 export const sortableCols = [
   { key: "subject", label: "Subject" },
